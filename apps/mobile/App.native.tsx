@@ -300,10 +300,11 @@ export default function App() {
           setDiagnostic(JSON.stringify(event.nativeEvent).slice(0, 1600));
         }}
       />
-      <View pointerEvents="none" style={styles.debugOverlay}>
-        <Text style={styles.debugText}>{status}</Text>
-        {diagnostic ? <Text style={styles.debugText}>{diagnostic}</Text> : null}
-      </View>
+      {diagnostic ? (
+        <View pointerEvents="none" style={styles.debugOverlay}>
+          <Text style={styles.debugText}>{diagnostic}</Text>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
