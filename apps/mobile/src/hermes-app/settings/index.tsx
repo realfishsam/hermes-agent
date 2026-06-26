@@ -1,5 +1,5 @@
-import { IconDownload, IconRefresh, IconUpload } from '@tabler/icons-react'
-import { useRef } from 'react'
+import { IconArrowLeft, IconDownload, IconRefresh, IconUpload } from '@tabler/icons-react'
+import { useRef, useState } from 'react'
 
 import { Tip } from '@/components/ui/tooltip'
 import { getHermesConfigDefaults, getHermesConfigRecord, saveHermesConfig } from '@/hermes'
@@ -44,13 +44,23 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
   const [providerView, setProviderView] = useRouteEnumParam<ProviderView>('pview', PROVIDER_VIEWS, 'accounts')
   const [keysView, setKeysView] = useRouteEnumParam<KeysView>('kview', KEYS_VIEWS, 'tools')
 
+  // Mobile master-detail: list first, drill into the detail on tap. Desktop
+  // always renders both panes side-by-side, so this flag is a no-op there.
+  const mobileStandalone =
+    typeof window !== 'undefined' && Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__)
+  const [mobileDrilled, setMobileDrilled] = useState(false)
+  const selectView = (view: SettingsViewId) => {
+    setActiveView(view)
+    if (mobileStandalone) setMobileDrilled(true)
+  }
+
   const openProviderView = (view: ProviderView) => {
-    setActiveView('providers')
+    selectView('providers')
     setProviderView(view)
   }
 
   const openKeysView = (view: KeysView) => {
-    setActiveView('keys')
+    selectView('keys')
     setKeysView(view)
   }
 
@@ -88,7 +98,9 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
 
   return (
     <OverlayView closeLabel={t.settings.closeSettings} onClose={onClose}>
-      <OverlaySplitLayout>
+      <OverlaySplitLayout
+        className={mobileStandalone ? (mobileDrilled ? '[&_aside]:hidden' : '[&_main]:hidden') : undefined}
+      >
         <OverlaySidebar>
           {SECTIONS.map(s => {
             const view = `config:${s.id}` as SettingsViewId
@@ -99,7 +111,7 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
                 icon={s.icon}
                 key={s.id}
                 label={t.settings.sections[s.id] ?? s.label}
-                onClick={() => setActiveView(view)}
+                onClick={() => selectView(view)}
               />
             )
           })}
@@ -107,14 +119,14 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
             active={activeView === 'notifications'}
             icon={Bell}
             label={t.settings.nav.notifications}
-            onClick={() => setActiveView('notifications')}
+            onClick={() => selectView('notifications')}
           />
           <div className="my-2 h-px bg-border/30" />
           <OverlayNavItem
             active={activeView === 'providers'}
             icon={Zap}
             label={t.settings.nav.providers}
-            onClick={() => setActiveView('providers')}
+            onClick={() => selectView('providers')}
           />
           {activeView === 'providers' && (
             <div className="ml-3.5 flex flex-col gap-0.5 pl-1.5">
@@ -138,13 +150,13 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
             active={activeView === 'gateway'}
             icon={Globe}
             label={t.settings.nav.gateway}
-            onClick={() => setActiveView('gateway')}
+            onClick={() => selectView('gateway')}
           />
           <OverlayNavItem
             active={activeView === 'keys'}
             icon={KeyRound}
             label={t.settings.nav.apiKeys}
-            onClick={() => setActiveView('keys')}
+            onClick={() => selectView('keys')}
           />
           {activeView === 'keys' && (
             <div className="ml-3.5 flex flex-col gap-0.5 pl-1.5">
@@ -168,20 +180,20 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
             active={activeView === 'mcp'}
             icon={Wrench}
             label={t.settings.nav.mcp}
-            onClick={() => setActiveView('mcp')}
+            onClick={() => selectView('mcp')}
           />
           <OverlayNavItem
             active={activeView === 'sessions'}
             icon={Archive}
             label={t.settings.nav.archivedChats}
-            onClick={() => setActiveView('sessions')}
+            onClick={() => selectView('sessions')}
           />
           <div className="my-2 h-px bg-border/30" />
           <OverlayNavItem
             active={activeView === 'about'}
             icon={Info}
             label={t.settings.nav.about}
-            onClick={() => setActiveView('about')}
+            onClick={() => selectView('about')}
           />
           <div className="mt-auto flex items-center gap-1 pt-2">
             <Tip label={t.settings.exportConfig}>
@@ -214,6 +226,17 @@ export function SettingsView({ gateway, onClose, onConfigSaved, onMainModelChang
         </OverlaySidebar>
 
         <OverlayMain className="px-0 pb-0 pt-[calc(var(--titlebar-height)+1rem)]">
+          {mobileStandalone && mobileDrilled && (
+            <button
+              aria-label="Back to settings list"
+              className="sticky top-0 z-10 -mt-2 mb-1 flex items-center gap-1 self-start rounded-md bg-(--ui-chat-surface-background) px-3 py-2 text-sm text-(--ui-text-secondary) hover:text-foreground"
+              onClick={() => setMobileDrilled(false)}
+              type="button"
+            >
+              <IconArrowLeft className="size-4" />
+              Settings
+            </button>
+          )}
           {activeView === 'config:appearance' ? (
             <AppearanceSettings />
           ) : activeView === 'about' ? (

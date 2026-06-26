@@ -81,6 +81,14 @@ export function SidebarSessionRow({
   // session is waiting on the user.
   const needsInput = useStore($attentionSessionIds).includes(session.id)
 
+  // Mobile: skip the context-menu / actions-menu wrappers entirely. Long-press
+  // and ellipsis menus on phones surface a desktop-shaped dropdown that
+  // doesn't fit; pin/archive/delete are reachable from the chat header
+  // overflow or the cmd palette instead.
+  const mobileStandalone =
+    typeof window !== 'undefined' &&
+    Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__)
+
   return (
     <SessionContextMenu
       onArchive={onArchive}

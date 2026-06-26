@@ -6,6 +6,10 @@ import { bundledRendererHtml } from './src/generated/bundled-renderer-html';
 
 const defaultGatewayUrl = process.env.EXPO_PUBLIC_HERMES_GATEWAY_URL || '';
 const defaultGatewayToken = process.env.EXPO_PUBLIC_HERMES_GATEWAY_TOKEN || '';
+// When set (e.g. EXPO_PUBLIC_RENDERER_URL=http://127.0.0.1:5174) the WebView
+// loads from Vite's dev server with HMR instead of the baked-in HTML — every
+// renderer edit pushes in milliseconds, no `renderer:bundle` round-trip.
+const rendererDevUrl = process.env.EXPO_PUBLIC_RENDERER_URL || '';
 
 const mobileBridgeScript = `
 (function () {
@@ -281,7 +285,7 @@ export default function App() {
     <SafeAreaView style={styles.root}>
       <WebView
         ref={webViewRef}
-        source={{ html: bundledRendererHtml, baseUrl: 'https://hermes.local/' }}
+        source={rendererDevUrl ? { uri: rendererDevUrl } : { html: bundledRendererHtml, baseUrl: 'https://hermes.local/' }}
         style={styles.webview}
         containerStyle={styles.webview}
         originWhitelist={['*']}

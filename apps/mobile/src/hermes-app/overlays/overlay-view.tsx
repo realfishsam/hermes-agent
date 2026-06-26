@@ -73,12 +73,23 @@ export function OverlayView({
 
           <Button
             aria-label={closeLabel}
-            className="pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+0.1875rem+(var(--titlebar-height)-env(safe-area-inset-top))/2)] -translate-y-1/2 text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground [-webkit-app-region:no-drag]"
+            className="pointer-events-auto absolute right-3 top-[calc(env(safe-area-inset-top)+0.1875rem+(var(--titlebar-height)-env(safe-area-inset-top))/2)] -translate-y-1/2 text-(--ui-text-tertiary) hover:bg-(--chrome-action-hover) hover:text-foreground [-webkit-app-region:no-drag] data-[mobile=true]:fixed data-[mobile=true]:top-auto data-[mobile=true]:bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] data-[mobile=true]:right-4 data-[mobile=true]:z-[60] data-[mobile=true]:size-auto data-[mobile=true]:translate-y-0 data-[mobile=true]:rounded-full data-[mobile=true]:bg-(--theme-primary) data-[mobile=true]:px-4 data-[mobile=true]:py-2 data-[mobile=true]:text-base data-[mobile=true]:font-semibold data-[mobile=true]:text-white data-[mobile=true]:shadow-lg"
+            data-mobile={
+              typeof window !== 'undefined' &&
+              Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__)
+                ? 'true'
+                : undefined
+            }
             onClick={closeOverlay}
             size="icon-titlebar"
             variant="ghost"
           >
-            <Codicon name="close" size="1rem" />
+            {typeof window !== 'undefined' &&
+            Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__) ? (
+              'Done'
+            ) : (
+              <Codicon name="close" size="1rem" />
+            )}
           </Button>
         </div>
 

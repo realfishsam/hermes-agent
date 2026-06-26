@@ -256,6 +256,15 @@ export function CronView({ onClose, onOpenSession, setStatusbarItemGroup: _setSt
   const [busyJobId, setBusyJobId] = useState<null | string>(null)
   // Master/detail: the job whose schedule + run history fill the right pane.
   const [selectedJobId, setSelectedJobId] = useState<null | string>(null)
+  // Mobile master-detail: list first, drill into the selected job on tap.
+  const mobileStandalone =
+    typeof window !== 'undefined' &&
+    Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__)
+  const [mobileDrilled, setMobileDrilled] = useState(false)
+  const selectJob = (id: string) => {
+    setSelectedJobId(id)
+    if (mobileStandalone) setMobileDrilled(true)
+  }
   // Set when a job is opened from the sidebar so we scroll it into view once the
   // row exists. Cleared after the scroll fires.
   const pendingScrollRef = useRef<null | string>(null)
@@ -406,7 +415,9 @@ export function CronView({ onClose, onOpenSession, setStatusbarItemGroup: _setSt
       {loading && jobs.length === 0 ? (
         <PageLoader label={c.loading} />
       ) : (
-        <OverlaySplitLayout>
+        <OverlaySplitLayout
+          className={mobileStandalone ? (mobileDrilled ? '[&_aside]:hidden' : '[&_main]:hidden') : undefined}
+        >
           <OverlaySidebar>
             <OverlayNewButton label={c.newCron} onClick={() => setEditor({ mode: 'create' })} />
             {totalCount > 0 && (
@@ -424,7 +435,7 @@ export function CronView({ onClose, onOpenSession, setStatusbarItemGroup: _setSt
                 c={c}
                 job={job}
                 key={job.id}
-                onSelect={() => setSelectedJobId(job.id)}
+                onSelect={() => selectJob(job.id)}
               />
             ))}
             {visibleJobs.length === 0 && (
@@ -435,6 +446,16 @@ export function CronView({ onClose, onOpenSession, setStatusbarItemGroup: _setSt
           </OverlaySidebar>
 
           <OverlayMain className="px-0">
+            {mobileStandalone && mobileDrilled && (
+              <button
+                aria-label="Back"
+                className="mx-3 mb-2 flex items-center gap-1 self-start rounded-md py-2 text-sm text-(--ui-text-secondary) hover:text-foreground"
+                onClick={() => setMobileDrilled(false)}
+                type="button"
+              >
+                <span aria-hidden>←</span> Cron jobs
+              </button>
+            )}
             {selectedJob ? (
               <CronJobDetail
                 busy={busyJobId === selectedJob.id}

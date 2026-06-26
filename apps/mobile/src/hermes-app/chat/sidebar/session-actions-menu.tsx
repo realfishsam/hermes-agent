@@ -205,6 +205,14 @@ interface SessionActionsMenuProps
 export function SessionActionsMenu({ children, align = 'end', sideOffset = 6, ...actions }: SessionActionsMenuProps) {
   const { t } = useI18n()
   const { renameDialog, renderItems } = useSessionActions(actions)
+  // Mobile shell: the desktop dropdown doesn't fit a phone — render the
+  // trigger as plain content with no menu attached.
+  if (
+    typeof window !== 'undefined' &&
+    Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__)
+  ) {
+    return <>{children}</>
+  }
 
   return (
     <>
@@ -231,6 +239,14 @@ interface SessionContextMenuProps extends SessionActions {
 export function SessionContextMenu({ children, ...actions }: SessionContextMenuProps) {
   const { t } = useI18n()
   const { renameDialog, renderItems } = useSessionActions(actions)
+  // Mobile shell: no long-press context menu — would surface a desktop-sized
+  // dropdown over the session list.
+  if (
+    typeof window !== 'undefined' &&
+    Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__)
+  ) {
+    return <>{children}</>
+  }
 
   return (
     <>

@@ -108,6 +108,16 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
   const platformIds = useMemo(() => platforms?.map(p => p.id) ?? [], [platforms])
   const [selectedId, setSelectedId] = useRouteEnumParam('platform', platformIds, platformIds[0] ?? '')
 
+  // Mobile master-detail: list of platforms first, drill into one on tap.
+  const mobileStandalone =
+    typeof window !== 'undefined' &&
+    Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__)
+  const [mobileDrilled, setMobileDrilled] = useState(false)
+  const selectPlatform = (id: string) => {
+    setSelectedId(id)
+    if (mobileStandalone) setMobileDrilled(true)
+  }
+
   const refreshPlatforms = useCallback(async (silent = false) => {
     if (!silent) {
       setRefreshing(true)
@@ -268,14 +278,19 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
       {!platforms ? (
         <PageLoader label={m.loading} />
       ) : (
-        <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <div
+          className={cn(
+            'grid h-full min-h-0 grid-cols-1 lg:grid-cols-[14rem_minmax(0,1fr)]',
+            mobileStandalone && (mobileDrilled ? '[&_aside]:hidden' : '[&_main]:hidden')
+          )}
+        >
           <aside className="min-h-0 overflow-y-auto p-2">
             <ul className="space-y-1">
               {visiblePlatforms.map(platform => (
                 <li key={platform.id}>
                   <PlatformRow
                     active={selected?.id === platform.id}
-                    onSelect={() => setSelectedId(platform.id)}
+                    onSelect={() => selectPlatform(platform.id)}
                     platform={platform}
                   />
                 </li>
@@ -284,6 +299,16 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
           </aside>
 
           <main className="min-h-0 overflow-hidden">
+            {mobileStandalone && mobileDrilled && (
+              <button
+                aria-label="Back"
+                className="mx-3 mb-2 mt-2 flex items-center gap-1 self-start rounded-md py-2 text-sm text-(--ui-text-secondary) hover:text-foreground"
+                onClick={() => setMobileDrilled(false)}
+                type="button"
+              >
+                <span aria-hidden>←</span> Messaging apps
+              </button>
+            )}
             {selected && (
               <PlatformDetail
                 edits={edits[selected.id] || {}}
