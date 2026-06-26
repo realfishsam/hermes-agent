@@ -1574,7 +1574,14 @@ html.hermes-mobile-standalone [aria-label='Window controls'] a {
   width: 2.75rem !important;
   height: 2.75rem !important;
   border-radius: 999rem !important;
-  color: color-mix(in srgb, var(--dt-foreground) 64%, transparent) !important;
+  color: color-mix(in srgb, var(--dt-foreground) 72%, transparent) !important;
+  /* Filled chip behind the glyph so it stays legible over busy chat content
+     and the dynamic-island region. Subtle border tightens the edge. */
+  background: color-mix(in srgb, var(--ui-chat-surface-background) 90%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-stroke-tertiary) 60%, transparent) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 0 0 0.5px rgba(15, 23, 42, 0.04) !important;
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
 }
 
 /* Mobile sidebar reads like a real drawer: full-bleed dark panel, larger rows,
@@ -1587,13 +1594,66 @@ html.hermes-mobile-standalone [data-sidebar='sidebar'] {
 
 html.hermes-mobile-standalone [data-sidebar='content'] {
   padding-inline: 1.25rem !important;
+  /* One unified scroll inside the mobile drawer: nav + sessions scroll
+     together so the layout reads as a single column. */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Inner scrollers within the mobile drawer release their own overflow so
+   SidebarContent owns the scroll. Sessions, pinned, messaging — all flow
+   inline. */
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='group'] {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='group-content'] {
+  overflow: visible !important;
+  min-height: 0 !important;
+}
+
+/* Phone-friendly session rows: bump the text + row height so they're tappable
+   without thumb gymnastics. */
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] span.truncate {
+  font-size: 0.95rem !important;
+  line-height: 1.35rem !important;
+}
+
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] button {
+  min-height: 2.5rem;
+  padding-block: 0.4rem !important;
+}
+
+/* Kill the dead space between the search bar and PINNED. The desktop layout
+   uses flex-1 wrappers around the sessions sections so the sessions list
+   fills the rail vertically; on mobile we want everything packed at the top.
+   Only zero flex-grow on the direct children of SidebarContent and on the
+   group wrappers — not on every descendant (that broke internal layouts). */
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] > div,
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] [data-sidebar='group'] {
+  flex: 0 0 auto !important;
+}
+
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] {
+  justify-content: flex-start !important;
+}
+
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] .min-h-32,
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] .min-h-24,
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] .max-h-44,
+html.hermes-mobile-standalone [data-mobile-drawer] [data-sidebar='content'] .max-h-56 {
+  min-height: 0 !important;
+  max-height: none !important;
 }
 
 /* Mobile tap targets inside settings / file browser / any OverlayView: bump
-   form controls and nav rows to ≥44pt per iOS HIG. */
-html.hermes-mobile-standalone [data-slot='overlay-view'] button,
+   form controls and nav rows to ≥44pt per iOS HIG. Switches keep their
+   intrinsic size — they're shaped, not buttons. */
+html.hermes-mobile-standalone [data-slot='overlay-view'] button:not([role='switch']):not([role='checkbox']):not([data-slot*='switch']),
 html.hermes-mobile-standalone [data-slot='overlay-view'] [role='combobox'],
-html.hermes-mobile-standalone [data-slot='overlay-view'] [role='button'],
+html.hermes-mobile-standalone [data-slot='overlay-view'] [role='button']:not([role='switch']),
 html.hermes-mobile-standalone [data-slot='overlay-view'] select {
   min-height: 2.75rem;
 }
@@ -1613,6 +1673,18 @@ html.hermes-mobile-standalone [data-sidebar='menu-button'] {
   border-radius: 0.95rem !important;
   font-size: 1.05rem !important;
   color: color-mix(in srgb, #fff 88%, transparent) !important;
+}
+
+/* Full-bleed overlays on mobile — no rounded card, no margins. The overlay
+   is the screen. */
+html.hermes-mobile-standalone [data-slot='overlay-view'] {
+  padding: 0 !important;
+}
+
+html.hermes-mobile-standalone [data-slot='overlay-view'] > div {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 html.hermes-mobile-standalone [data-mobile-drawer] {

@@ -1165,7 +1165,7 @@ export function ChatSidebar({
       {sidebarOpen && (
         <button
           aria-label="Close sidebar"
-          className="fixed inset-0 z-[2147482400] cursor-default bg-black/18 backdrop-blur-[1px]"
+          className="fixed inset-0 z-[2147482400] cursor-default bg-black/45 backdrop-blur-md"
           onClick={() => setSidebarOpen(false)}
           type="button"
         />
