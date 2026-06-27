@@ -21,6 +21,7 @@ import { runGatewayRestart } from '@/store/system-actions'
 
 import { useRefreshHotkey } from '../hooks/use-refresh-hotkey'
 import { useRouteEnumParam } from '../hooks/use-route-enum-param'
+import { MobileDonePill } from '../mobile-done-pill'
 import { PageSearchShell } from '../page-search-shell'
 import { CREDENTIAL_CONTROL_CLASS } from '../settings/credential-key-ui'
 import { ListRow } from '../settings/primitives'
@@ -331,6 +332,7 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
           </main>
         </div>
       )}
+      <MobileDonePill />
     </PageSearchShell>
   )
 }

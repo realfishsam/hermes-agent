@@ -1,6 +1,5 @@
 import type * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 import { PageLoader } from '@/components/page-loader'
 import { Badge } from '@/components/ui/badge'
@@ -17,8 +16,8 @@ import type { SkillInfo, ToolsetInfo } from '@/types/hermes'
 import { useRefreshHotkey } from '../hooks/use-refresh-hotkey'
 import { useRouteEnumParam } from '../hooks/use-route-enum-param'
 import { PAGE_INSET_X } from '../layout-constants'
+import { MobileDonePill } from '../mobile-done-pill'
 import { PageSearchShell } from '../page-search-shell'
-import { NEW_CHAT_ROUTE } from '../routes'
 import { ComputerUsePanel } from '../settings/computer-use-panel'
 import { asText, includesQuery, prettyName, toolNames, toolsetDisplayLabel } from '../settings/helpers'
 import { ToolsetConfigPanel } from '../settings/toolset-config-panel'
@@ -81,7 +80,6 @@ interface SkillsViewProps extends React.ComponentProps<'section'> {
 
 export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...props }: SkillsViewProps) {
   const { t } = useI18n()
-  const navigate = useNavigate()
   const [mode, setMode] = useRouteEnumParam('tab', SKILLS_MODES, 'skills')
 
   const [query, setQuery] = useState('')
@@ -390,16 +388,7 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
           )}
         </div>
       )}
-      {mobileStandalone && (
-        <button
-          aria-label="Done"
-          className="fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-4 z-[60] rounded-full bg-(--theme-primary) px-4 py-2 text-base font-semibold text-white shadow-lg active:opacity-80"
-          onClick={() => navigate(NEW_CHAT_ROUTE)}
-          type="button"
-        >
-          Done
-        </button>
-      )}
+      <MobileDonePill />
     </PageSearchShell>
   )
 }
