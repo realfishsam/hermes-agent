@@ -239,33 +239,60 @@ interface SessionContextMenuProps extends SessionActions {
 export function SessionContextMenu({ children, ...actions }: SessionContextMenuProps) {
   const { t } = useI18n()
   const { renameDialog, renderItems } = useSessionActions(actions)
-  // Use a controlled DropdownMenu so we can open it programmatically from a
-  // long-press timer — Radix's ContextMenu only opens on a *trusted*
-  // contextmenu event, which a JS-dispatched MouseEvent is not. Right-click
-  // on desktop and long-press on touch both route through onOpenChange(true).
   const [open, setOpen] = useState(false)
-  const longPressTimer = useRef<number | null>(null)
-  const longPressOrigin = useRef<{ x: number; y: number } | null>(null)
-  const clearLongPress = () => {
-    if (longPressTimer.current !== null) {
-      window.clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+
+  // iOS WebKit arms the long-press text-selection loupe before React's
+  // synthetic Pointer Events fire, so we have to intercept the native
+  // `touchstart` itself with `{ passive: false }` and call preventDefault
+  // to keep the loupe from ever starting. The same handler starts our
+  // 500ms hold timer that opens the menu.
+  useEffect(() => {
+    const node = wrapperRef.current
+    if (!node) return
+    let timer: number | null = null
+    let origin: { x: number; y: number } | null = null
+    const clear = () => {
+      if (timer !== null) {
+        window.clearTimeout(timer)
+        timer = null
+      }
+      origin = null
     }
-    longPressOrigin.current = null
-  }
-  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    longPressOrigin.current = { x: event.clientX, y: event.clientY }
-    longPressTimer.current = window.setTimeout(() => {
-      setOpen(true)
-      longPressTimer.current = null
-    }, 500)
-  }
-  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!longPressOrigin.current) return
-    const dx = event.clientX - longPressOrigin.current.x
-    const dy = event.clientY - longPressOrigin.current.y
-    if (dx * dx + dy * dy > 100) clearLongPress()
-  }
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0]
+      if (!touch) return
+      // Note: do NOT preventDefault here — it would cancel the click that
+      // navigates into the session. Loupe suppression relies on the CSS
+      // (-webkit-user-select: none) propagating to descendant text spans
+      // via the `data-session-row` selector in styles.css.
+      origin = { x: touch.clientX, y: touch.clientY }
+      timer = window.setTimeout(() => {
+        setOpen(true)
+        timer = null
+      }, 500)
+    }
+    const onTouchMove = (event: TouchEvent) => {
+      if (!origin) return
+      const touch = event.touches[0]
+      if (!touch) return
+      const dx = touch.clientX - origin.x
+      const dy = touch.clientY - origin.y
+      if (dx * dx + dy * dy > 100) clear()
+    }
+    node.addEventListener('touchstart', onTouchStart, { passive: false })
+    node.addEventListener('touchmove', onTouchMove, { passive: true })
+    node.addEventListener('touchend', clear)
+    node.addEventListener('touchcancel', clear)
+    return () => {
+      clear()
+      node.removeEventListener('touchstart', onTouchStart)
+      node.removeEventListener('touchmove', onTouchMove)
+      node.removeEventListener('touchend', clear)
+      node.removeEventListener('touchcancel', clear)
+    }
+  }, [])
+
   const onContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault()
     setOpen(true)
@@ -274,19 +301,7 @@ export function SessionContextMenu({ children, ...actions }: SessionContextMenuP
     <>
       <DropdownMenu onOpenChange={setOpen} open={open}>
         <DropdownMenuTrigger asChild>
-          <div
-            onContextMenu={onContextMenu}
-            onPointerCancel={clearLongPress}
-            onPointerDown={onPointerDown}
-            onPointerLeave={clearLongPress}
-            onPointerMove={onPointerMove}
-            onPointerUp={clearLongPress}
-            // Kill iOS's long-press text-selection loupe + callout so a
-            // 500ms hold opens our menu instead of zooming the row text.
-            // (display:contents would drop these styles from inherit chain,
-            // so render as a real box.)
-            style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-          >
+          <div data-session-row="" onContextMenu={onContextMenu} ref={wrapperRef}>
             {children}
           </div>
         </DropdownMenuTrigger>
