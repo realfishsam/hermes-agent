@@ -1,5 +1,6 @@
 import type * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { PageLoader } from '@/components/page-loader'
 import { Badge } from '@/components/ui/badge'
@@ -17,10 +18,15 @@ import { useRefreshHotkey } from '../hooks/use-refresh-hotkey'
 import { useRouteEnumParam } from '../hooks/use-route-enum-param'
 import { PAGE_INSET_X } from '../layout-constants'
 import { PageSearchShell } from '../page-search-shell'
+import { NEW_CHAT_ROUTE } from '../routes'
 import { ComputerUsePanel } from '../settings/computer-use-panel'
 import { asText, includesQuery, prettyName, toolNames, toolsetDisplayLabel } from '../settings/helpers'
 import { ToolsetConfigPanel } from '../settings/toolset-config-panel'
 import type { SetStatusbarItemGroup } from '../shell/statusbar-controls'
+
+const mobileStandalone =
+  typeof window !== 'undefined' &&
+  Boolean((window as { __HERMES_MOBILE_STANDALONE__?: boolean }).__HERMES_MOBILE_STANDALONE__)
 
 const SKILLS_MODES = ['skills', 'toolsets'] as const
 type SkillsMode = (typeof SKILLS_MODES)[number]
@@ -75,6 +81,7 @@ interface SkillsViewProps extends React.ComponentProps<'section'> {
 
 export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...props }: SkillsViewProps) {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const [mode, setMode] = useRouteEnumParam('tab', SKILLS_MODES, 'skills')
 
   const [query, setQuery] = useState('')
@@ -189,11 +196,17 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
     }
   }
 
+  // On mobile, the horizontal tag-cloud of categories was unusable (rows
+  // ran off-screen and overlapped the camera notch). Replace with a
+  // drill-down list: top-level shows categories as full-width rows;
+  // tapping one filters to just that category with a "back" affordance.
+  const mobileSkillsDrilldown = mobileStandalone && mode === 'skills'
+
   return (
     <PageSearchShell
       {...props}
       filters={
-        mode === 'skills' && categories.length > 0 ? (
+        !mobileSkillsDrilldown && mode === 'skills' && categories.length > 0 ? (
           <>
             <TextTab active={activeCategory === null} onClick={() => setActiveCategory(null)}>
               {t.skills.all} <TextTabMeta>{totalSkills}</TextTabMeta>
@@ -241,8 +254,38 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
     >
       {!skills || !toolsets ? (
         <PageLoader label={t.skills.loading} />
+      ) : mobileSkillsDrilldown && activeCategory === null && query.trim() === '' ? (
+        <div className={cn('h-full overflow-y-auto py-3', PAGE_INSET_X)}>
+          <ul className="divide-y divide-(--ui-stroke-secondary)">
+            {categories.map(category => (
+              <li key={category.key}>
+                <button
+                  className="flex w-full items-center justify-between gap-3 py-3.5 text-left active:bg-(--ui-bg-quinary)"
+                  onClick={() => setActiveCategory(category.key)}
+                  type="button"
+                >
+                  <span className="truncate text-base font-medium">{prettyName(category.key)}</span>
+                  <span className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+                    {category.count}
+                    <Codicon name="chevron-right" size="0.875rem" />
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : mode === 'skills' ? (
         <div className={cn('h-full overflow-y-auto py-3', PAGE_INSET_X)}>
+          {mobileSkillsDrilldown && activeCategory !== null && (
+            <button
+              className="mb-2 flex items-center gap-1.5 text-sm text-muted-foreground active:text-foreground"
+              onClick={() => setActiveCategory(null)}
+              type="button"
+            >
+              <Codicon name="chevron-left" size="0.875rem" />
+              {t.skills.all}
+            </button>
+          )}
           {visibleSkills.length === 0 ? (
             <EmptyState description={t.skills.noSkillsDesc} title={t.skills.noSkillsTitle} />
           ) : (
@@ -346,6 +389,16 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
             </div>
           )}
         </div>
+      )}
+      {mobileStandalone && (
+        <button
+          aria-label="Done"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-4 z-[60] rounded-full bg-(--theme-primary) px-4 py-2 text-base font-semibold text-white shadow-lg active:opacity-80"
+          onClick={() => navigate(NEW_CHAT_ROUTE)}
+          type="button"
+        >
+          Done
+        </button>
       )}
     </PageSearchShell>
   )
