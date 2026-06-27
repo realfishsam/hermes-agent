@@ -32,6 +32,25 @@ For a real phone install, build a **Release** app with the JavaScript bundle emb
    xcodebuild -showsdks | grep iphone
    ```
 
+5. Ensure the **iOS device platform** is installed. On Xcode 16+/26.x the build SDK
+   and the on-device deployment platform are installed separately, so a passing
+   `xcodebuild -showsdks` is **not** sufficient. Download the platform component
+   (CLI equivalent of *Xcode → Settings → Components → iOS*):
+
+   ```bash
+   xcodebuild -downloadPlatform iOS
+   ```
+
+   If a later Release build fails with `iOS <ver> is not installed. Please download and
+   install the platform from Xcode > Settings > Components.`, this is the fix. Confirm the
+   device is then an eligible destination:
+
+   ```bash
+   xcodebuild -workspace ios/Hermes.xcworkspace -scheme Hermes -showdestinations | grep -i <device-name>
+   # expect a line NOT under "Ineligible destinations", e.g.
+   # { platform:iOS, arch:arm64, id:..., name:<device> }
+   ```
+
 ### iPhone
 
 1. Connect the iPhone to the Mac with USB.
@@ -92,6 +111,12 @@ security find-identity -v -p codesigning
 ```
 
 You should see an `Apple Development: ...` identity.
+
+> **Note:** `app.config.js` ships `bundleIdentifier: 'com.nousresearch.hermes'`, which is
+> owned by the upstream team — automatic signing under your own personal team cannot
+> register it. Change `ios.bundleIdentifier` (and `android.package`) to your own
+> reverse-DNS id before building, and use that id in the `devicectl ... launch` commands
+> later in this guide.
 
 ## Configure the Hermes gateway
 
@@ -290,6 +315,27 @@ Then launch:
 ```bash
 xcrun devicectl device process launch --device <IPHONE_UDID> com.nousresearch.hermes
 xcrun devicectl device info processes --device <IPHONE_UDID> | grep -i Hermes
+```
+
+### Failure: app installs but won't launch ("profile has not been explicitly trusted")
+
+A build signed with a **free/personal** Apple team is not trusted by iOS on first run.
+`Build Succeeded` and the install both pass, but auto-launch fails:
+
+```text
+ERROR: The application failed to launch. (com.apple.dt.CoreDeviceError error 10002)
+Unable to launch <bundle-id> because it has an invalid code signature, inadequate
+entitlements or its profile has not been explicitly trusted by the user.
+```
+
+Trust the developer profile once, on the phone: **Settings → General → VPN & Device
+Management →** under **DEVELOPER APP** tap **`Apple Development: <your-apple-id>`** **→
+Trust**. This is an on-device security gate and cannot be cleared from the Mac. Then
+relaunch:
+
+```bash
+xcrun devicectl device process launch --device <IPHONE_UDID> <bundle-id>
+# -> "Launched application with <bundle-id> bundle identifier."
 ```
 
 ## Troubleshooting visual/runtime issues we hit
