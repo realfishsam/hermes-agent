@@ -239,12 +239,51 @@ interface SessionContextMenuProps extends SessionActions {
 export function SessionContextMenu({ children, ...actions }: SessionContextMenuProps) {
   const { t } = useI18n()
   const { renameDialog, renderItems } = useSessionActions(actions)
-  // Radix ContextMenu binds to right-click on desktop and long-press on
-  // touch, so the same wrapper covers both phones and laptops.
+  // Radix's ContextMenuTrigger fires on right-click. On touch, dnd-kit's
+  // pointer sensor captures the pointer and Radix's built-in long-press
+  // detection never fires reliably. Bind our own 500ms long-press detector
+  // and synthesize a contextmenu event so the same Radix menu opens.
+  const longPressTimer = useRef<number | null>(null)
+  const longPressOrigin = useRef<{ x: number; y: number } | null>(null)
+  const clearLongPress = () => {
+    if (longPressTimer.current !== null) {
+      window.clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    longPressOrigin.current = null
+  }
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch') return
+    longPressOrigin.current = { x: event.clientX, y: event.clientY }
+    const { clientX, clientY, currentTarget } = event
+    longPressTimer.current = window.setTimeout(() => {
+      currentTarget.dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, cancelable: true, view: window, clientX, clientY })
+      )
+      longPressTimer.current = null
+    }, 500)
+  }
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!longPressOrigin.current) return
+    const dx = event.clientX - longPressOrigin.current.x
+    const dy = event.clientY - longPressOrigin.current.y
+    if (dx * dx + dy * dy > 100) clearLongPress()
+  }
   return (
     <>
       <ContextMenu>
-        <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+        <ContextMenuTrigger asChild>
+          <div
+            className="contents"
+            onPointerCancel={clearLongPress}
+            onPointerDown={onPointerDown}
+            onPointerLeave={clearLongPress}
+            onPointerMove={onPointerMove}
+            onPointerUp={clearLongPress}
+          >
+            {children}
+          </div>
+        </ContextMenuTrigger>
         <ContextMenuContent aria-label={t.sidebar.row.actionsFor(actions.title)} className="w-40">
           {renderItems(ContextMenuItem)}
         </ContextMenuContent>
