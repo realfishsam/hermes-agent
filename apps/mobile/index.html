@@ -376,6 +376,7 @@
             return toWsUrl(conn.baseUrl, conn.token);
           },
           openExternal: async (url) => { location.href = url; },
+          fetchLinkTitle: async () => '',
           openSessionWindow: async (sessionId) => { location.hash = '#/sessions/' + sessionId; },
           openNewSessionWindow: async () => { location.hash = '#/new'; },
           sanitizeWorkspaceCwd: async (cwd) => cwd || '',
