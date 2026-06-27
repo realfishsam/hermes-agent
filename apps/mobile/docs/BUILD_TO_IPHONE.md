@@ -32,6 +32,25 @@ For a real phone install, build a **Release** app with the JavaScript bundle emb
    xcodebuild -showsdks | grep iphone
    ```
 
+5. Ensure the **iOS device platform** is installed. On Xcode 16+/26.x the build SDK
+   and the on-device deployment platform are installed separately, so a passing
+   `xcodebuild -showsdks` is **not** sufficient. Download the platform component
+   (CLI equivalent of *Xcode → Settings → Components → iOS*):
+
+   ```bash
+   xcodebuild -downloadPlatform iOS
+   ```
+
+   If a later Release build fails with `iOS <ver> is not installed. Please download and
+   install the platform from Xcode > Settings > Components.`, this is the fix. Confirm the
+   device is then an eligible destination:
+
+   ```bash
+   xcodebuild -workspace ios/Hermes.xcworkspace -scheme Hermes -showdestinations | grep -i <device-name>
+   # expect a line NOT under "Ineligible destinations", e.g.
+   # { platform:iOS, arch:arm64, id:..., name:<device> }
+   ```
+
 ### iPhone
 
 1. Connect the iPhone to the Mac with USB.
@@ -92,6 +111,12 @@ security find-identity -v -p codesigning
 ```
 
 You should see an `Apple Development: ...` identity.
+
+> **Note:** `app.config.js` ships `bundleIdentifier: 'com.nousresearch.hermes'`, which is
+> owned by the upstream team — automatic signing under your own personal team cannot
+> register it. Change `ios.bundleIdentifier` (and `android.package`) to your own
+> reverse-DNS id before building, and use that id in the `devicectl ... launch` commands
+> later in this guide.
 
 ## Configure the Hermes gateway
 
@@ -292,6 +317,27 @@ xcrun devicectl device process launch --device <IPHONE_UDID> com.nousresearch.he
 xcrun devicectl device info processes --device <IPHONE_UDID> | grep -i Hermes
 ```
 
+### Failure: app installs but won't launch ("profile has not been explicitly trusted")
+
+A build signed with a **free/personal** Apple team is not trusted by iOS on first run.
+`Build Succeeded` and the install both pass, but auto-launch fails:
+
+```text
+ERROR: The application failed to launch. (com.apple.dt.CoreDeviceError error 10002)
+Unable to launch <bundle-id> because it has an invalid code signature, inadequate
+entitlements or its profile has not been explicitly trusted by the user.
+```
+
+Trust the developer profile once, on the phone: **Settings → General → VPN & Device
+Management →** under **DEVELOPER APP** tap **`Apple Development: <your-apple-id>`** **→
+Trust**. This is an on-device security gate and cannot be cleared from the Mac. Then
+relaunch:
+
+```bash
+xcrun devicectl device process launch --device <IPHONE_UDID> <bundle-id>
+# -> "Launched application with <bundle-id> bundle identifier."
+```
+
 ## Troubleshooting visual/runtime issues we hit
 
 ### App opens to Expo Dev Client
@@ -320,6 +366,77 @@ Do not hide this behind a narrow media query until a real phone screenshot prove
 ### Browser-side gateway probe fails with `Load failed`
 
 Electron Desktop can use privileged networking; iOS WebView cannot. The mobile app routes `window.hermesDesktop.api(...)` through the React Native bridge, and native `fetch` adds `X-Hermes-Session-Token` / bearer auth. Do not block setup solely on a browser-side `/api/status` probe.
+
+## Pitfalls: app installs but won't run or connect (and the fixes)
+
+These bit us *after* a clean build + install — the app was on the device but
+either froze or couldn't reach the gateway. Each has a distinct root cause.
+
+### App launches but the UI is frozen / taps do nothing
+
+The renderer renders, but buttons are dead. The device console (or
+`onContentProcessDidTerminate`) shows the WebView **content process terminating
+and reloading** in a loop — the classic iOS out-of-memory signature.
+
+Cause: the inlined renderer is huge (~50 MB) and OOM-crashes the `WKWebView`
+content process. The bulk is **`@streamdown/code`**, which statically
+`import`s `shiki/bundle-full` (~400 language grammars). `react-shiki` is already
+shimmed for mobile, but this path isn't.
+
+Fix: shim `@streamdown/code` the same way — a Vite alias to a no-op
+code-highlighter plugin (keeps the plugin contract, imports zero Shiki). Took the
+inlined bundle from ~51 MB to ~23 MB and the freeze disappeared. Verify with the
+`scopeName` count in `dist/assets/index-*.js` (hundreds → ~0).
+
+### App loads REST data but "gateway didn't come up" (no live stream)
+
+REST calls succeed but the gateway WebSocket never connects, so the app reports
+the gateway didn't start.
+
+Cause: the renderer opens `ws://<host>:<port>/api/ws` from inside the WebView,
+whose origin is `https://hermes.local`. A cleartext `ws://` from an `https` page
+is **active mixed content**, and WKWebView blocks it *before any network I/O*
+(nothing reaches the gateway).
+
+Fix: set the WebView `baseUrl` to `http://hermes.local/` in `App.native.tsx` so
+the `ws://` call is same-scheme. (`crypto.subtle` is unused; only
+`navigator.clipboard` needs a secure context and degrades gracefully.) Or serve
+the gateway over `https`/`wss` so the secure origin is satisfied.
+
+### Every request fails "Network request failed" — even with `NSAllowsArbitraryLoads`
+
+No request reaches the gateway. Tell-tale: **Safari on the phone** loads
+`http://<gateway>/api/status` fine, but the app can't reach the same URL.
+
+Cause: an App Transport Security gotcha. If `NSAllowsLocalNetworking` is present
+**alongside** `NSAllowsArbitraryLoads`, iOS 10+ **ignores** `NSAllowsArbitraryLoads`
+and only permits cleartext to *true-local* addresses — which excludes Tailscale
+`100.x` (and most self-hosted gateway IPs). So ATS silently blocks every request,
+synchronously, before it hits the network (which is why nothing reaches the
+gateway and the app never appears under Settings → Privacy → Local Network).
+
+Fix: the `NSAppTransportSecurity` dict must be `{ NSAllowsArbitraryLoads: true }`
+**only** — do **not** add `NSAllowsLocalNetworking`. ("Safari works, app doesn't"
+to the same cleartext URL ⇒ app-level ATS block; Safari is exempt from ATS.)
+
+### Connecting over Tailscale / VPN traps
+
+- The iPhone must be **signed into the same tailnet** and have Tailscale
+  **toggled on** — "installed" isn't enough (it won't show as a peer otherwise).
+- iOS routes **one VPN at a time**. A second VPN — or a content-filter like
+  NordVPN Threat Protection — can grab the slot or drop the connection to a
+  private IP, surfacing as "Network request failed". Disable it and confirm
+  Tailscale is the connected VPN.
+- The gateway can sit in a `gateway_running: false` (stopped) state even while
+  its dashboard answers `/api/status`; start it before expecting the app to connect.
+
+### Debugging tip
+
+Release builds swallow WebView console output (`if (__DEV__) console.log(...)`).
+To see the real error, temporarily surface the bridge's `diagnostic` messages to
+the on-screen overlay in `App.native.tsx`. On the gateway side, an `aiohttp`
+access log (configure `logging.basicConfig(INFO)`) shows the phone's requests
+(User-Agent `Hermes/1 CFNetwork…`) the moment they get through.
 
 ## Exact successful sequence recap
 
