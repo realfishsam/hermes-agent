@@ -1670,7 +1670,7 @@ html.hermes-mobile-standalone [data-slot='overlay-view'] textarea {
    this matched any SidebarGroup that happened to be a :first-child (e.g.
    PINNED inside the sessions wrapper), shoving the section ~110px down. */
 html.hermes-mobile-standalone [data-sidebar='content'] > [data-sidebar='group']:first-child {
-  padding-top: calc(env(safe-area-inset-top) + 3.25rem) !important;
+  padding-top: calc(env(safe-area-inset-top) + 0.5rem) !important;
 }
 
 html.hermes-mobile-standalone [data-sidebar='menu-button'] {
