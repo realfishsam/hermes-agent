@@ -75,6 +75,32 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
   const sidebarOpen = useStore($sidebarOpen)
   const panesFlipped = useStore($panesFlipped)
 
+  // Phones own the top of the screen via the OS chrome. Drop the desktop
+  // pane-toggle clusters, flip arrow, speaker/keyboard/settings — they're
+  // mouse-driven affordances that duplicate the iOS status bar visually. Keep
+  // ONE control: the hamburger that opens the chat sidebar (which is otherwise
+  // hidden once the user drills into a session). Placed AFTER all hooks so
+  // rules-of-hooks isn't violated.
+  if (mobileStandalone) {
+    return (
+      <div className="fixed left-3 top-[calc(env(safe-area-inset-top)+0.5rem)] z-70 pointer-events-auto">
+        <Button
+          aria-label="Open sidebar"
+          className="size-10 rounded-full bg-(--ui-chat-surface-background)/85 border border-(--ui-stroke-tertiary) text-(--ui-text-secondary) shadow-sm backdrop-blur-md hover:text-foreground"
+          onClick={() => {
+            triggerHaptic('open')
+            setSidebarOpen(true)
+          }}
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          <Codicon name="three-bars" size="1.05rem" />
+        </Button>
+      </div>
+    )
+  }
+
   const toggleHaptics = () => {
     if (!hapticsMuted) {
       triggerHaptic('tap')
