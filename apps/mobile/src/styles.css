@@ -1508,6 +1508,40 @@ html.hermes-mobile-standalone [data-slot='composer-bounds'] {
   min-height: 0;
 }
 
+/* Liquid-glass strip behind the iOS status bar — content scrolls under it,
+   blurred + slightly desaturated so the OS glyphs (time/signal/battery)
+   remain legible without printing an opaque grey band over them. Composed
+   of three stacked effects (Apple's "Liquid Glass" recipe):
+   1. backdrop-filter does the heavy lifting (blur + saturation boost),
+   2. a vertical gradient adds the slightest tint that fades into nothing,
+   3. an inset shadow at the bottom edge gives a soft glass-meets-canvas
+      seam, so the strip reads as a translucent layer instead of a flat bar. */
+html.hermes-mobile-standalone body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Extend a bit past the safe area to let the blur edge feather smoothly
+     into the chat below instead of cutting hard at the inset boundary. */
+  height: calc(env(safe-area-inset-top) + 0.5rem);
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--ui-chat-surface-background) 28%, transparent) 0%,
+      color-mix(in srgb, var(--ui-chat-surface-background) 14%, transparent) 70%,
+      transparent 100%
+    );
+  backdrop-filter: saturate(160%) blur(22px);
+  -webkit-backdrop-filter: saturate(160%) blur(22px);
+  /* Soft hairline at the seam — gives the glass an edge without a stroke. */
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--dt-foreground) 5%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  pointer-events: none;
+  z-index: 80;
+}
+
 html.hermes-mobile-standalone [data-slot='aui_thread-viewport'] {
   padding-top: env(safe-area-inset-top);
 }
