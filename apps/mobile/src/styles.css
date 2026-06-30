@@ -1088,6 +1088,15 @@ html.hermes-mobile-standalone [data-slot='page-search-filters'] > button[data-ac
   transform: rotate(90deg);
 }
 
+/* Drill-down: when a category is active, collapse the rest of the category
+   list so the user sees ONLY the chosen row + the filtered skills below it.
+   The list of 30+ categories was burying the filtered result far below the
+   fold, making the tap feel like nothing happened. Tapping the active row
+   again sets activeCategory back to null and the full list re-expands. */
+html.hermes-mobile-standalone [data-slot='page-search-filters']:has(> button[data-active='true']) > button:not([data-active='true']) {
+  display: none;
+}
+
 /* Tap-target minimum: 44pt (2.75rem) for every interactive row inside the
    mobile drawer + list surfaces. Excludes inline switches/toggles which
    carry their own intrinsic size and would otherwise become awkward bars. */
