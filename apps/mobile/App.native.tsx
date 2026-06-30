@@ -324,6 +324,14 @@ export default function App() {
         automaticallyAdjustContentInsets={false}
         contentInsetAdjustmentBehavior="never"
         hideKeyboardAccessoryView
+        /* react-native-webview on iOS defaults keyboardDisplayRequiresUserAction
+           to true. With our touch-action: manipulation + various event
+           handlers in the renderer, WebKit was registering the focus but
+           not recognizing the same tap as a "user gesture" for keyboard
+           purposes — input got focus + the iOS edit menu (Paste/AutoFill/
+           Format) appeared, but the keyboard never rose. Setting this to
+           false lets focus from any source open the keyboard. */
+        keyboardDisplayRequiresUserAction={false}
         allowsBackForwardNavigationGestures
         setSupportMultipleWindows={false}
         onMessage={handleMessage}
