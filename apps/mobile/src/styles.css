@@ -695,6 +695,17 @@ textarea,
   user-select: text;
 }
 
+/* iOS loupe suppression on session rows. WebKit arms its text-selection
+   magnifier on long-press anywhere it finds selectable text — defeating it
+   by inheritance alone fails because deeper spans re-acquire user-select:text
+   from chat-message rules. Force NONE on the wrapper + every descendant. */
+[data-session-row],
+[data-session-row] * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
 button,
 [role='button'] {
   -webkit-user-select: none;

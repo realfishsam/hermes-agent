@@ -99,6 +99,7 @@ export function SidebarSessionRow({
       title={title}
     >
       <SidebarRowShell
+        data-session-row=""
         actions={
           <div className="relative z-2 grid w-[1.375rem] place-items-center">
             {!isWorking && (
