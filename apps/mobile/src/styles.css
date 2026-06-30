@@ -1005,15 +1005,41 @@ html.hermes-mobile-standalone [data-slot='page-search-filters'] > button {
   height: auto;
   min-height: 2.75rem;
   justify-content: space-between;
+  align-items: center;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--ui-stroke-tertiary);
   font-size: 0.9375rem;
+  /* iOS WebKit suppresses the synthetic `click` after touchend on buttons
+     that don't declare touch intent — categories looked tappable but the
+     onClick never fired because WebKit treated the tap as ambiguous (it
+     could be a scroll start). Declare manipulation intent so the click
+     fires deterministically. cursor: pointer reinforces the same hint. */
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.06);
 }
 html.hermes-mobile-standalone [data-slot='page-search-filters'] > button > span {
   text-decoration: none !important;
 }
+/* Chevron at the trailing edge — gives the drill-down row a clear "this is
+   tappable" affordance and rotates on active so the user sees the tap
+   registered (previous state was a subtle bg change that was easy to miss). */
+html.hermes-mobile-standalone [data-slot='page-search-filters'] > button::after {
+  content: '›';
+  margin-left: 0.5rem;
+  color: var(--ui-text-quaternary);
+  font-size: 1.125rem;
+  line-height: 1;
+  transition: transform 120ms ease-out, color 120ms ease-out;
+}
 html.hermes-mobile-standalone [data-slot='page-search-filters'] > button[data-active='true'] {
-  background: var(--chrome-action-hover);
+  background: var(--ui-row-active-background);
+  color: var(--foreground);
+  font-weight: 600;
+}
+html.hermes-mobile-standalone [data-slot='page-search-filters'] > button[data-active='true']::after {
+  color: var(--foreground);
+  transform: rotate(90deg);
 }
 
 /* Tap-target minimum: 44pt (2.75rem) for every interactive row inside the
