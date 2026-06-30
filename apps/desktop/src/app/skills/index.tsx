@@ -1,5 +1,6 @@
 import type * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { PageLoader } from '@/components/page-loader'
 import { Badge } from '@/components/ui/badge'
@@ -80,6 +81,7 @@ interface SkillsViewProps extends React.ComponentProps<'section'> {
 
 export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...props }: SkillsViewProps) {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const [mode, setMode] = useRouteEnumParam('tab', SKILLS_MODES, 'skills')
 
   const [query, setQuery] = useState('')
@@ -197,6 +199,7 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
   return (
     <PageSearchShell
       {...props}
+      data-mobile-overlay="skills"
       filters={
         mode === 'skills' && categories.length > 0 ? (
           <>
@@ -352,6 +355,16 @@ export function SkillsView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...p
           )}
         </div>
       )}
+      {/* Mobile-only Done pill — thumb-reach dismiss back to chat root.
+          Hidden on desktop via CSS (.hidden + .mobile-done-pill mobile rule). */}
+      <button
+        aria-label={t.common.done}
+        className="mobile-done-pill hidden"
+        onClick={() => navigate('/')}
+        type="button"
+      >
+        {t.common.done}
+      </button>
     </PageSearchShell>
   )
 }

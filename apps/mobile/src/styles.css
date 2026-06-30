@@ -966,6 +966,19 @@ html.hermes-mobile-standalone [data-slot='overlay-nav-item'] {
   font-size: 0.9375rem;
 }
 
+/* Skills & Tools (and any other top-level Route that opts into a mobile
+   overlay) needs its own positioning context so the .mobile-done-pill (which
+   uses position: absolute) anchors to the view rather than the document.
+   Also hide the floating sidebar trigger while this view is active — the
+   Done pill is the way out, not the drawer. */
+html.hermes-mobile-standalone [data-mobile-overlay] {
+  position: relative;
+}
+html.hermes-mobile-standalone:has([data-mobile-overlay]) [data-tool-id='sidebar'],
+html.hermes-mobile-standalone:has([data-mobile-overlay]) [data-slot='sidebar-trigger'] {
+  display: none !important;
+}
+
 /* Done pill: bottom-right thumb-reach dismiss for full-screen overlays. */
 html.hermes-mobile-standalone .mobile-done-pill {
   display: inline-flex !important;
