@@ -1,5 +1,6 @@
 import type * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { PageLoader } from '@/components/page-loader'
 import { StatusDot, type StatusTone } from '@/components/status-dot'
@@ -98,7 +99,12 @@ function fieldCopy(field: MessagingEnvVarInfo, m: Translations['messaging']) {
 
 export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, ...props }: MessagingViewProps) {
   const { t } = useI18n()
+  const navigate = useNavigate()
   const m = t.messaging
+  // Master-detail drill on mobile: when a platform is selected, mark body
+  // so the mobile-overlay split-layout CSS swaps to the detail pane.
+  // Clears when the view unmounts or selection clears.
+  const [drilled, setDrilled] = useState(false)
   // Both save/toggle toasts offer the same one-click restart.
   const restartGatewayAction = { label: t.commandCenter.restartGateway, onClick: () => void runGatewayRestart() }
   const [platforms, setPlatforms] = useState<MessagingPlatformInfo[] | null>(null)
@@ -108,6 +114,14 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
   const [saving, setSaving] = useState<string | null>(null)
   const platformIds = useMemo(() => platforms?.map(p => p.id) ?? [], [platforms])
   const [selectedId, setSelectedId] = useRouteEnumParam('platform', platformIds, platformIds[0] ?? '')
+
+  useEffect(() => {
+    if (drilled) document.body.dataset.mobileDrilled = 'true'
+    else delete document.body.dataset.mobileDrilled
+    return () => {
+      delete document.body.dataset.mobileDrilled
+    }
+  }, [drilled])
 
   const refreshPlatforms = useCallback(
     async (silent = false) => {
@@ -264,6 +278,7 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
   return (
     <PageSearchShell
       {...props}
+      data-mobile-overlay="messaging"
       onSearchChange={setQuery}
       searchHidden={(platforms?.length ?? 0) === 0}
       searchPlaceholder={m.search}
@@ -272,14 +287,20 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
       {!platforms ? (
         <PageLoader label={m.loading} />
       ) : (
-        <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[14rem_minmax(0,1fr)]">
-          <aside className="min-h-0 overflow-y-auto p-2">
+        <div
+          className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[14rem_minmax(0,1fr)]"
+          data-slot="overlay-split-layout"
+        >
+          <aside className="min-h-0 overflow-y-auto p-2" data-slot="overlay-sidebar">
             <ul className="space-y-1">
               {visiblePlatforms.map(platform => (
                 <li key={platform.id}>
                   <PlatformRow
                     active={selected?.id === platform.id}
-                    onSelect={() => setSelectedId(platform.id)}
+                    onSelect={() => {
+                      setSelectedId(platform.id)
+                      setDrilled(true)
+                    }}
                     platform={platform}
                   />
                 </li>
@@ -287,7 +308,10 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
             </ul>
           </aside>
 
-          <main className="min-h-0 overflow-hidden">
+          <main className="min-h-0 overflow-hidden" data-slot="overlay-main">
+            <button className="mobile-detail-back hidden" onClick={() => setDrilled(false)} type="button">
+              ‹ {t.common.back}
+            </button>
             {selected && (
               <PlatformDetail
                 edits={edits[selected.id] || {}}
@@ -310,6 +334,14 @@ export function MessagingView({ setStatusbarItemGroup: _setStatusbarItemGroup, .
           </main>
         </div>
       )}
+      <button
+        aria-label={t.common.done}
+        className="mobile-done-pill hidden"
+        onClick={() => navigate('/')}
+        type="button"
+      >
+        {t.common.done}
+      </button>
     </PageSearchShell>
   )
 }
